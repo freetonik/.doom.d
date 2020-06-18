@@ -1,17 +1,17 @@
 ;;; $DOOMDIR/config.el -*- lexical-binding: t; -*-
-
 ;; You do not need to run 'doom sync' after modifying this file!
 
+;; ==================================
+;; Essentials
 (setq
  user-full-name "Rakhim Davketkaliyev"
  user-mail-address "rakhim@rakhim.org"
-
  doom-font (font-spec :family "SF Mono" :size 16)
  projectile-project-search-path '("~/code/" "~/Dropbox/Projects/Codexpanse/Codexpanse Courses/")
  dired-dwim-target t
  doom-theme 'doom-one-light
- evil-respect-visual-line-mode t
-
+ ;; evil-respect-visual-line-mode t
+ scroll-margin 10
  org-bullets-bullet-list '("·")
  org-directory "~/Dropbox/Org/"
  my-braindump-directory (concat org-directory "braindump")
@@ -29,20 +29,17 @@
 (global-set-key (kbd "s-W") 'delete-other-windows)
 (global-set-key (kbd "s-o") 'other-window)
 
-;; Search
-;; (global-set-key (kbd "s-F") '+ivy/project-search)
-
 ;; Undo
 (global-set-key (kbd "s-z") 'undo-fu-only-undo)
 (global-set-key (kbd "s-r") 'undo-fu-only-redo)
 
+;; Misc
+(map! :ne "M-/" #'comment-or-uncomment-region)
 (map! :leader
       :prefix "s"
       :desc "Search brain" "b" #'(lambda () (interactive) (counsel-rg nil org-directory)))
 
-(defun org-journal-find-location ()
-  (org-journal-new-entry t) (goto-char (point-min)))
-
+;; ==================================
 ;; Org and ecosystem
 (global-set-key (kbd "s-=") 'org-capture)
 
@@ -75,32 +72,6 @@
         (org-hugo-auto-export-mode -1))))
   (add-hook 'org-mode-hook #'rakhim/conditional-hugo-enable))
 
-(after! (org org-roam)
-  (defun rakhim/org-roam-export-all ()
-    "Re-exports all Org-roam files to Hugo markdown."
-    (interactive)
-    (dolist (f (org-roam--list-all-files))
-      (with-current-buffer (find-file f)
-        (when (s-contains? "SETUPFILE" (buffer-string))
-          (org-hugo-export-wim-to-md)))))
-
-  (defun rakhim/org-roam--backlinks-list (file)
-    (when (org-roam--org-roam-file-p file)
-      (mapcar #'car (org-roam-db-query [:select :distinct [from]
-                                        :from links
-                                        :where (= to $s1)
-                                        :and from :not :like $s2] file "%private%"))))
-
-  (defun rakhim/org-export-preprocessor (_backend)
-    (when-let ((links (rakhim/org-roam--backlinks-list (buffer-file-name))))
-      (insert "\n** Backlinks\n")
-      (dolist (link links)
-        (insert (format "- [[file:%s][%s]]\n"
-                        (file-relative-name link org-roam-directory)
-                        (org-roam--get-title-or-slug link))))))
-
-  (add-hook 'org-export-before-processing-hook #'rakhim/org-export-preprocessor))
-
 (use-package! org-download
   :after org
   :config
@@ -128,36 +99,87 @@
         :desc "Org-Roam-Buffer" "r" #'org-roam)
   :config
   (setq org-roam-capture-templates
-        '(("l" "lit" plain (function org-roam--capture-get-point)
+        '(("n" "note" plain (function org-roam--capture-get-point)
            "%?"
            :file-name "${slug}"
-           :head "#+setupfile:./hugo_setup.org
-#+hugo_slug: ${slug}
-#+title: ${title}\n"
-           :unnarrowed t)
-          ;; ("p" "private" plain (function org-roam-capture--get-point)
-          ;;  "%?"
-          ;;  :file-name "private/${slug}"
-          ;;  :head "#+title: ${title}\n"
-          ;;  :unnarrowed t)
-          )))
+           :head "#+title: ${title}\n#+setupfile:./hugo_setup.org\n#+hugo_slug:${slug}"
+           :unnarrowed t))))
+
+(after! (org org-roam)
+  (defun rakhim/org-roam-export-all ()
+    "Re-exports all Org-roam files to Hugo markdown."
+    (interactive)
+    (dolist (f (org-roam--list-all-files))
+      (with-current-buffer (find-file f)
+        (when (s-contains? "SETUPFILE" (buffer-string))
+          (org-hugo-export-wim-to-md)))))
+
+  (defun rakhim/org-roam--backlinks-list (file)
+    (when (org-roam--org-roam-file-p file)
+      (mapcar #'car (org-roam-db-query [:select :distinct [from]
+                                        :from links
+                                        :where (= to $s1)
+                                        :and from :not :like $s2] file "%private%"))))
+
+  (defun rakhim/org-export-preprocessor (_backend)
+    (when-let ((links (rakhim/org-roam--backlinks-list (buffer-file-name))))
+      (insert "\n** Backlinks\n")
+      (dolist (link links)
+        (insert (format "- [[file:%s][%s]]\n"
+                        (file-relative-name link org-roam-directory)
+                        (org-roam--get-title-or-slug link))))))
+
+  (add-hook 'org-export-before-processing-hook #'rakhim/org-export-preprocessor))
 
 (use-package! org-journal
   :after org
   :init
   (map! :leader
         :prefix "j"
-        :desc "Today journal file" "t" #'org-journal-open-current-journal-file
-        :desc "New journal entry" "j" )
+        :desc "Today journal file" "o" #'org-journal-open-current-journal-file
+        :desc "New journal entry" "j" #'(lambda () (interactive) (org-capture 1 "j"))
+        :desc "New journal entry" "t" #'(lambda () (interactive) (org-capture 1 "t")))
   :custom
   (org-journal-file-format "%Y-%m-%d.org")
   (org-journal-date-format "%A, %d/%m/%Y")
   (org-journal-dir my-journal-dir))
 
-(map! :ne "M-/" #'comment-or-uncomment-region)
+;; ==================================
+;; Markdown
+(defun markdown-export-html-to-clipboard (lines-to-skip)
+  "Export Markdown to HTML while skipping first lines-to-skip, copy to cliboard"
+  (interactive)
+  (markdown-kill-ring-save)
+  (let ((oldbuf (current-buffer)))
+    (save-current-buffer
+      (set-buffer "*markdown-output*")
+      (if lines-to-skip
+          (progn
+            (goto-char (point-min))
+            (kill-whole-line)))
+      (with-no-warnings (mark-whole-buffer))
+      (evil-yank-lines (point-min) (point-max)))))
 
-;; `nil', `relative'.
-(setq display-line-numbers-type t)
+(defun markdown-export-html-to-clipboard-full ()
+  (interactive) (markdown-export-html-to-clipboard nil))
+
+(defun markdown-export-html-to-clipboard-no-1st-line ()
+  (interactive) (markdown-export-html-to-clipboard 1))
+
+(use-package markdown-mode
+  :defer t
+  :init
+  (map! :leader
+        :prefix "e"
+        :desc "Export HTML to clipboard" "O" #'markdown-export-html-to-clipboard-full
+        :desc "Export HTML (no 1st line)" "o" #'markdown-export-html-to-clipboard-no-1st-line)
+  (map! :desc "Narrow to subtree" "C-s-<down>" #'markdown-narrow-to-subtree
+        :desc "Widen" "C-s-<up>" #'widen))
+
+
+;; =====================
+;; =====================
+;; Misc utilify stuff
 
 ;; Jumping between marks
 (defun my-pop-local-mark-ring ()
@@ -177,7 +199,7 @@
 (global-set-key (kbd "s-,") 'my-pop-local-mark-ring)
 (global-set-key (kbd "s-.") 'unpop-to-mark-command)
 
-
+;; Line joins
 (defun smart-join-line (beg end)
   "If in a region, join all the lines in it. If not, join the current line with the next line."
   (interactive "r")
@@ -202,39 +224,9 @@
 
 (global-set-key (kbd "s-j") 'smart-join-line)
 
-;; Markdown
-(defun markdown-export-html-to-clipboard (lines-to-skip)
-  "Export Markdown to HTML while skipping first lines-to-skip, copy to cliboard"
-  (interactive)
-  (markdown-kill-ring-save)
-  (let ((oldbuf (current-buffer)))
-    (save-current-buffer
-      (set-buffer "*markdown-output*")
-      (if lines-to-skip
-          (progn
-            (goto-char (point-min))
-            (kill-whole-line)))
-      (with-no-warnings (mark-whole-buffer))
-      (evil-yank-lines (point-min) (point-max)))))
-
-(defun markdown-export-html-to-clipboard-full ()
-  (interactive)
-  (markdown-export-html-to-clipboard nil))
-
-(defun markdown-export-html-to-clipboard-no-1st-line ()
-  (interactive)
-  (markdown-export-html-to-clipboard 1))
-
-(use-package markdown-mode
-  :defer t
-  :init
-  (map! :leader
-        :prefix "e"
-        :desc "Export HTML to clipboard" "O" #'markdown-export-html-to-clipboard-full
-        :desc "Export HTML (no 1st line)" "o" #'markdown-export-html-to-clipboard-no-1st-line)
-  (map! :desc "Narrow to subtree" "C-s-<down>" #'markdown-narrow-to-subtree
-        :desc "Widen" "C-s-<up>" #'widen))
-
+;; Org journal fn for capture
+(defun org-journal-find-location ()
+  (org-journal-new-entry t) (goto-char (point-min)))
 
 ;; - `load!' for loading external *.el files relative to this one
 ;; - `use-package!' for configuring packages
