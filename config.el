@@ -9,13 +9,21 @@
  doom-font (font-spec :family "SF Mono" :size 16)
  projectile-project-search-path '("~/code/" "~/Dropbox/Projects/Codexpanse/Codexpanse Courses/")
  dired-dwim-target t
- doom-theme 'doom-one-light
+ ;; doom-theme 'doom-one-light
  ;; evil-respect-visual-line-mode t
+ evil-want-fine-undo t
  scroll-margin 10
  org-bullets-bullet-list '("·")
+ org-ellipsis "⤵"
+ org-support-shift-select t
+ org-catch-invisible-edits 'smart
  org-directory "~/Dropbox/Org/"
  my-braindump-directory (concat org-directory "braindump")
  my-journal-dir (concat org-directory "journal"))
+
+(global-visual-line-mode t)
+(delete-selection-mode 1)
+(global-subword-mode 1)
 
 ;; Movement
 (global-set-key (kbd "s-<up>") 'evil-goto-first-line)
