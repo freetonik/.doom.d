@@ -42,6 +42,7 @@
 (global-set-key (kbd "s-r") 'undo-fu-only-redo)
 
 ;; Misc
+(global-set-key (kbd "s-x") 'kill-region)
 (map! :ne "M-/" #'comment-or-uncomment-region)
 (map! :leader
       :prefix "s"
@@ -130,8 +131,8 @@
   (map! :leader
         :prefix "r"
         :desc "Org-Roam-Insert" "i" #'org-roam-insert
-        :desc "Org-Roam-Find" "f" #'org-roam-find-file
-        :desc "Org-Roam-Buffer" "r" #'org-roam)
+        :desc "Org-Roam-Find" "r" #'org-roam-find-file
+        :desc "Org-Roam-Buffer" "b" #'org-roam)
   :config
   (setq org-roam-capture-templates
         '(("n" "note" plain (function org-roam--capture-get-point)
