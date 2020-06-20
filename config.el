@@ -43,6 +43,33 @@
 ;; Org and ecosystem
 (global-set-key (kbd "s-=") 'org-capture)
 
+(defun org-html-export-as-slimhtml
+  (&optional async subtreep visible-only body-only ext-plist)
+  (interactive)
+  (org-export-to-buffer 'slimhtml "*slimhtml*"
+    async subtreep visible-only body-only ext-plist (lambda () (html-mode))))
+
+(defun org-html-export-as-slimhtml-no-1st-line-and-copy ()
+  (interactive)
+  (org-html-export-as-html nil nil t t)
+  (goto-char (point-min))
+  (kill-whole-line)
+  (kill-whole-line)
+  (goto-char (point-max))
+  (forward-line -1)
+  (kill-whole-line)
+  (with-no-warnings (mark-whole-buffer))
+  (simpleclip-copy (point-min) (point-max))
+  (delete-window))
+
+(defun org-html-export-as-slimhtml-and-copy ()
+  (interactive)
+  (org-html-export-as-html nil nil t t)
+  (with-no-warnings (mark-whole-buffer))
+  (simpleclip-copy (point-min) (point-max))
+  (delete-window))
+
+
 (after! org
   (map! :map org-mode-map
         :n "M-j" #'org-metadown

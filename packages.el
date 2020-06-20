@@ -52,3 +52,4 @@
 (package! hl-line :disable t)
 (package! org-download)
 (package! ox-hugo)
+(package! ox-slimhtml)
