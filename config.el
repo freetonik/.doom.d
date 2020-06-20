@@ -169,12 +169,15 @@
 (use-package markdown-mode
   :defer t
   :init
-  (map! :leader
-        :prefix "e"
-        :desc "Export HTML to clipboard" "O" #'markdown-export-html-to-clipboard-full
-        :desc "Export HTML (no 1st line)" "o" #'markdown-export-html-to-clipboard-no-1st-line)
-  (map! :desc "Narrow to subtree" "C-s-<down>" #'markdown-narrow-to-subtree
-        :desc "Widen" "C-s-<up>" #'widen))
+  (map! :map markdown-mode-map
+   :leader
+   :prefix "e"
+   :desc "Export HTML to clipboard" "O" #'markdown-export-html-to-clipboard-full
+   :desc "Export HTML (no 1st line)" "o" #'markdown-export-html-to-clipboard-no-1st-line)
+  (map!
+   :map markdown-mode-map
+   :desc "Narrow to subtree" "C-s-<down>" #'markdown-narrow-to-subtree
+   :desc "Widen" "C-s-<up>" #'widen))
 
 
 ;; =====================
